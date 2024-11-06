@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalyzer\\LLParser.csproj": {}
+    "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalizer_Assignment1_PLT\\LLParser.csproj": {}
   },
   "projects": {
-    "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalyzer\\LLParser.csproj": {
+    "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalizer_Assignment1_PLT\\LLParser.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalyzer\\LLParser.csproj",
+        "projectUniqueName": "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalizer_Assignment1_PLT\\LLParser.csproj",
         "projectName": "LLParser",
-        "projectPath": "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalyzer\\LLParser.csproj",
+        "projectPath": "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalizer_Assignment1_PLT\\LLParser.csproj",
         "packagesPath": "C:\\Users\\mmung\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalyzer\\obj\\",
+        "outputPath": "C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalizer_Assignment1_PLT\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\mmung\\AppData\\Roaming\\NuGet\\NuGet.Config"
