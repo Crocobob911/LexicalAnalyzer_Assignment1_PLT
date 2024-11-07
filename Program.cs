@@ -4,8 +4,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 
-// c#에서는 전처리기 지시문으로 상수를 선언할 수 없는 관계로
-// token 값을 의미하는 열거형을 사용하였습니다.
+// c#에서는 전처리기 지시문으로 상수를 선언할 수 없으므로
+// token 값을 의미하는 열거형을 사용
 enum Token {
     ID = 1,
     Const = 2,
@@ -18,7 +18,6 @@ enum Token {
     RightParen = 16 // )
 }
 
-
 class Program {
     static void Main(string[] args) {
         LexicalAnalyzer lexAnalyzer = new LexicalAnalyzer();
@@ -27,16 +26,12 @@ class Program {
     }
 }
 
-
 class LexicalAnalyzer {
 
     private List<string> inputStringList = new List<string>();
     private List<string> lexemeList = new List<string>();
     private List<Token> tokenList = new List<Token>();
-    private List<String> lineList = new List<string>();
-    private Token currentToken = 0;
     private Token nextToken = 0;
-    private string currentLexeme = "";
     private string nextLexeme = "";
 
     private Dictionary<Token, int> tokenCount = new Dictionary<Token, int> {
@@ -44,26 +39,21 @@ class LexicalAnalyzer {
         { Token.Const, 0 },
         { Token.OP, 0 }
     };
-
-    private Dictionary<string, int> idResult = new Dictionary<string, int>();
+    
     private string opSymbols = "(+-*/();)";
     private bool errorFlag = false;
     private List<String> errorList = new List<string>();
     
     public void Analyze(string filePath) {
         MakeStringListFromFile(filePath);
-        MakeLexemeList(inputStringList);
+        MakeTokenList(inputStringList);
         
         Statements();
-        if (errorFlag)      PrintStringList(errorList);
-
-        // PrintAllCounts_debug();
-        // PrintAllLexeme_debug();
-        // PrintAllToken_debug();
+        if (errorFlag)      PrintElementsOfStringList(errorList);
     }
 
-    // 아래는, Text 파일을 읽어와
-    // Lexeme 리스트와 Token 리스트로 변환할 때 사용하는 메소드들
+    // Text File에서 String들을 읽어와
+    // Lexeme List와 Token List를 생성하는 메서드들
     private void MakeStringListFromFile(string codeFilePath) {
         var readFile = File.ReadAllLines(codeFilePath);
         foreach (var str in readFile) {
@@ -79,42 +69,47 @@ class LexicalAnalyzer {
         // }
         // Console.WriteLine(" ");
     }
-    private void MakeLexemeList(List<string> list) {
+    private void MakeTokenList(List<string> list) {
+        // 만들어진 Input String List에서 렉심을 하나씩 가져와
+        // 올바른 Token을 찾아 Token list에 추가하는 메서드
+        
         foreach (var lexeme in list) {
-            LookUpToken(lexeme);
+            LookUpToken_AddToTokenList(lexeme);
         }
     }
-    private void LookUpToken(string str) {
-        if (string.IsNullOrEmpty(str)) return;
+    private void LookUpToken_AddToTokenList(string lexeme) {
+        // 주어진 렉심의 Token을 판별하고
+        // 그것을 Token List에 추가하는 메서드
+        
+        if (string.IsNullOrEmpty(lexeme)) return;
 
-        // Console.WriteLine("Find Lexeme called : " + str);
-
-        if (char.IsLetter(str[0]) || str[0] == '_') {
-            foreach (var c in str) {
+        if (char.IsLetter(lexeme[0]) || lexeme[0] == '_') {
+            foreach (var c in lexeme) {
                 if (char.IsLetterOrDigit(c) || c == '_') { }
                 else {
-                    // letter or digit이 등장한 경우 
-                    LookUpOperatorToken(str); // 다른 토큰을 붙여주기 위해 lookup 호출
+                    LookUpOperatorToken(lexeme); // 연산자일 것이라고 판단
                     return;
                 }
             }
-
-            lexemeList.Add(str);
+            lexemeList.Add(lexeme);
             tokenList.Add(Token.ID); // Ident라고 판단
             // Console.WriteLine("ID");
         }
-        else if (str.All(char.IsDigit)) {
+        else if (lexeme.All(char.IsDigit)) {
             // 렉심에 숫자만 있다면
-            lexemeList.Add(str);
+            lexemeList.Add(lexeme);
             tokenList.Add(Token.Const); // 상수로 판단
             // Console.WriteLine("const");
         }
         else {
             // ident와 const 모두 아닌 경우
-            LookUpOperatorToken(str); // 특수문자의 토큰을 찾기 위해 lookup 호출
+            LookUpOperatorToken(lexeme); // 특수문자의 토큰을 찾기 위해 lookup 호출
         }
     }
     private void LookUpOperatorToken(string str) {
+        // Identifier나 const가 아닌
+        // + - * := ( ) 등의 연산자에 토큰을 판별해야할 때 사용하는 메서드
+        
         if (str is ":=") {
             lexemeList.Add(str);
             tokenList.Add(Token.AssignOp);
@@ -151,6 +146,9 @@ class LexicalAnalyzer {
         }
     }
     private void FixString(string str) {
+        // 띄어쓰기가 안 되어있거나, ASCII 값 32 이하의 char이 입력된 것을
+        // 정리하고, 제거해주는 메서드
+        
         var splitStr = new List<String>();
         for (int i = 0; i < str.Length; i++) {
             if (str[i] is '+' or '-' or '*' or '/' or '(' or ')' or ';') {
@@ -160,14 +158,12 @@ class LexicalAnalyzer {
                 splitStr.Add(str[(i + 1)..]);
                 break;
             }
-
             if (str[i] == ':' && str[i + 1] == '=') {
                 splitStr.Add(str[..i]);
                 splitStr.Add(":=");
                 splitStr.Add(str[(i + 2)..]);
                 break;
             }
-
             if (str[i] <= 32) {
                 splitStr.AddRange(str.Split(opSymbols));
                 break;
@@ -176,16 +172,15 @@ class LexicalAnalyzer {
 
         foreach (var word in splitStr) {
             // 고친 String의 Token을 다시 찾음
-            LookUpToken(word);
+            LookUpToken_AddToTokenList(word);
         }
     }
 
-    // 만들어둔 Lexeme 리스트와 Token 리스트에서 다음 요소를 가져와
-    // current와 next token, lexeme을 업데이트하는 함수
+
     private void Lexical() {
-        // 택완이형은 이게 있던데...뭘까?
-        //currentToken = nextToken;
-        //currentLexeme = nextLexeme;
+        // 만들어둔 Lexeme 리스트와 Token 리스트에서 다음 요소를 가져와
+        // next token, next lexeme을 업데이트하는 함수
+        
         if (tokenList.Count == 0) {
             nextToken = 0;
             nextLexeme = "";
@@ -242,6 +237,7 @@ class LexicalAnalyzer {
         Console.WriteLine("<< Expression Enter >>");
         Term();
         TermTail();
+        Console.WriteLine("<< Expression Exit >>");
     }
 
     private void TermTail() {
@@ -254,12 +250,14 @@ class LexicalAnalyzer {
         else {
             // 입실론 처리
         }
+        Console.WriteLine("<< TermTail Exit >>");
     }
 
     private void Term() {
         Console.WriteLine("<< Term Enter >>");
         Factor();
         FactorTail();
+        Console.WriteLine("<< Term Exit >>");
     }
     
     private void FactorTail() {
@@ -272,6 +270,7 @@ class LexicalAnalyzer {
         else {
             // 입실론 처리 -> 이거 어케 함
         }
+        Console.WriteLine("<< FactorTail Exit >>");
     }
   
     private void Factor() {
@@ -296,9 +295,10 @@ class LexicalAnalyzer {
         Console.WriteLine("<< Factor Exit >>");
     }
 
-    //--------- for Debug. Erase later ------------
     
-    private void PrintStringList(List<String> list) {
+    //--------- for Debug. Erase later. ------------
+    
+    private void PrintElementsOfStringList(List<String> list) {
         foreach (var str in list) {
             Console.Write(str + ' ');
         }
@@ -313,19 +313,18 @@ class LexicalAnalyzer {
         Console.WriteLine("-----------------");
         Console.WriteLine(" << Print all tokens >>");
         foreach (var token in tokenList) {
-            Console.WriteLine(token);
+            Console.Write(token + " ");
         }
-
+        Console.Write("\n");
         Console.WriteLine("-----------------");
     }
     public void PrintAllLexeme_debug() {
         Console.WriteLine("-----------------");
         Console.WriteLine(" << Print all lexemes >>");
         foreach (var lexeme in lexemeList) {
-            Console.WriteLine(lexeme);
+            Console.Write(lexeme + " ");
         }
-
+        Console.Write("\n");
         Console.WriteLine("-----------------");
     }
-
 }
