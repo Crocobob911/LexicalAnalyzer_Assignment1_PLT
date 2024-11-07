@@ -1,7 +1,40 @@
-# LexicalAnalyzer_Assignment1_PLT
+# LexicalAnalizer_Assignment1_PLT
 
-2024.2
-Programming Language Theory
+내가 못한 부분을 말해보자면
 
-Assignment 1
-Lexical Analyzer
+1. 문장 하나하나 읽지 못함 (전체로만 처리할 줄 앎)
+과제 안내문 처리 예시 보면 알 수 있는데
+입력된 문장을 한 줄 한 줄씩 처리해서
+ID Const OP 개수는 몇 개인지, 오류는 없는지 등을 출력함.
+
+이때, 내 코드는 아직 문장을 한 줄 한 줄 구별해서 읽지 못함.
+
+
+2. ID Const OP 개수 세는 거, 하다가 말았음
+각 요소별로 갯수는 딕셔너리에서 관리함.
+코드 맨 밑에 PrintAllCounts_Debug 라는 함수에 얼추 구현되어있음
+
+
+
+3. 예외처리 안 되어있음.
+에러났을 때 에러메시지 띄워줘야함. (이것도 1번에서 얘기한 것 대로, 한 문장씩 해줘야함.)
+
+좀 건드리긴 했는데
+그래서 bool errorFlag,  list<string> errorList 라는 것들이 있음.
+
+에러 나면 errorFlag = true,  errorList.Add("에러났어요")  해놓고
+errorList를 나중에 모두 출력해주면...되나? 싶어서 해놓음
+
+
+4. 실제 값 연산 해야함
+Text File에 적혀있는 코드대로 연산을 수행한 후, 
+변수 a, b, c 등등의 최종 결과를 출력해줘야하는데
+이거 아직 안 함
+
+
+5. 생성 규칙중에, 입실론으로 유도되는 것이 있음. 람다로.
+그거 뭐 어케해야하는 거지
+지금은 그냥 비워뒀음 (else 문 비어있는 게 있을 거임) -> 사실 이게 정답일지도
+
+
+써놓고 보니까 좀 많네
