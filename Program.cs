@@ -20,9 +20,17 @@ enum Token {
 
 class Program {
     static void Main(string[] args) {
+        //string filePath = args[0];  -- exe 파일 빌드할 때, 파일 이름을 같이 전달해줌.
+        string filePath = "code1.txt";
+        Console.WriteLine(filePath);
+        
         LexicalAnalyzer lexAnalyzer = new LexicalAnalyzer();
         
-        lexAnalyzer.Analyze("C:\\Users\\mmung\\Desktop\\대학\\프밍언\\프로젝트\\LexicalAnalizer_Assignment1_PLT\\code1.txt");
+        lexAnalyzer.Analyze(filePath);
+        
+        // Console.ReadKey();
+        // exe 파일 빌드해서 실행하면 자꾸 켜지자마자 꺼져서 넣어둠.
+        // -- 빌드할 때 주석 해제할 것!!!
     }
 }
 
@@ -38,7 +46,7 @@ class LexicalAnalyzer {
         { Token.ID, 0 },
         { Token.Const, 0 },
         { Token.OP, 0 }
-    };
+    }; // -- 요소의 개수를 저장하는 딕셔너리
     
     private string opSymbols = "(+-*/();)";
     private bool errorFlag = false;
@@ -49,21 +57,24 @@ class LexicalAnalyzer {
         MakeTokenList(inputStringList);
         
         Statements();
+        PrintAllCounts_debug();
         if (errorFlag)      PrintElementsOfStringList(errorList);
     }
 
     // Text File에서 String들을 읽어와
     // Lexeme List와 Token List를 생성하는 메서드들
     private void MakeStringListFromFile(string codeFilePath) {
+        // Text File에서 띄어쓰기 단위로 읽어와 Input String List에 저장해둠.
         var readFile = File.ReadAllLines(codeFilePath);
         foreach (var str in readFile) {
             var splitedStr = str.Split(' ');
             foreach (var word in splitedStr) {
-                // Console.WriteLine(word);
+                // Console.WriteLine(word);  -- 단어가 제대로 들어갔나 확인용. 나중에 지우기
                 inputStringList.Add(word);
             }
         }
 
+        // --,단어가 모두 잘 들어갔나 확인용. 나중에 지우기.
         // foreach (var str in inputStringList) {
         //     Console.WriteLine(str);
         // }
@@ -74,10 +85,10 @@ class LexicalAnalyzer {
         // 올바른 Token을 찾아 Token list에 추가하는 메서드
         
         foreach (var lexeme in list) {
-            LookUpToken_AddToTokenList(lexeme);
+            LookUpToken(lexeme);
         }
     }
-    private void LookUpToken_AddToTokenList(string lexeme) {
+    private void LookUpToken(string lexeme) {
         // 주어진 렉심의 Token을 판별하고
         // 그것을 Token List에 추가하는 메서드
         
@@ -93,13 +104,13 @@ class LexicalAnalyzer {
             }
             lexemeList.Add(lexeme);
             tokenList.Add(Token.ID); // Ident라고 판단
-            // Console.WriteLine("ID");
+            // Console.WriteLine("ID");   -- 디버깅용. 나중에 지우기
         }
         else if (lexeme.All(char.IsDigit)) {
             // 렉심에 숫자만 있다면
             lexemeList.Add(lexeme);
             tokenList.Add(Token.Const); // 상수로 판단
-            // Console.WriteLine("const");
+            // Console.WriteLine("const");   -- 디버깅용. 나중에 지우기
         }
         else {
             // ident와 const 모두 아닌 경우
@@ -146,13 +157,11 @@ class LexicalAnalyzer {
         }
     }
     private void FixString(string str) {
-        // 띄어쓰기가 안 되어있거나, ASCII 값 32 이하의 char이 입력된 것을
-        // 정리하고, 제거해주는 메서드
+        // 띄어쓰기가 안 되어있거나, ASCII 값 32 이하의 char이 입력된 것을 정리하고, 제거해주는 메서드
         
         var splitStr = new List<String>();
         for (int i = 0; i < str.Length; i++) {
             if (str[i] is '+' or '-' or '*' or '/' or '(' or ')' or ';') {
-                //Console.WriteLine(str[i]);
                 splitStr.Add(str[..i]);
                 splitStr.Add(str[i].ToString());
                 splitStr.Add(str[(i + 1)..]);
@@ -172,7 +181,7 @@ class LexicalAnalyzer {
 
         foreach (var word in splitStr) {
             // 고친 String의 Token을 다시 찾음
-            LookUpToken_AddToTokenList(word);
+            LookUpToken(word);
         }
     }
 
@@ -214,8 +223,10 @@ class LexicalAnalyzer {
         Console.WriteLine("<< Statement enter >>");
         Lexical();
         if (nextToken is Token.ID) {
+            tokenCount[Token.ID] += 1;
             Lexical();
             if (nextToken is Token.AssignOp) {
+                tokenCount[Token.OP] += 1;
                 Lexical();
                 Expression();
             }
@@ -243,6 +254,7 @@ class LexicalAnalyzer {
     private void TermTail() {
         Console.WriteLine("<< TermTail Enter >>");
         if (nextToken is Token.AddOp) {
+            tokenCount[Token.OP] += 1;
             Lexical();
             Term();
             TermTail();
@@ -263,6 +275,7 @@ class LexicalAnalyzer {
     private void FactorTail() {
         Console.WriteLine("<< FactorTail Enter >>");
         if (nextToken is Token.MultOp) {
+            tokenCount[Token.OP] += 1;
             Lexical();
             Factor();
             FactorTail();
@@ -275,7 +288,12 @@ class LexicalAnalyzer {
   
     private void Factor() {
         Console.WriteLine("<< Factor Enter >>");
-        if (nextToken is (Token.ID or Token.Const)) {
+        if (nextToken is Token.ID ) {
+            tokenCount[Token.ID] += 1;
+            Lexical();
+        }
+        else if (nextToken is Token.Const) {
+            tokenCount[Token.Const] += 1;
             Lexical();
         }
         else {
@@ -296,7 +314,7 @@ class LexicalAnalyzer {
     }
 
     
-    //--------- for Debug. Erase later. ------------
+    //--------- 디버깅용. 나중에 지우기 ------------
     
     private void PrintElementsOfStringList(List<String> list) {
         foreach (var str in list) {
