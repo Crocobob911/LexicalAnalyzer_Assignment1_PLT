@@ -8,6 +8,6 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = LLParser
-build_property.ProjectDir = C:\Users\mmung\Desktop\대학\프밍언\프로젝트\LexicalAnalizer_Assignment1_PLT\
+build_property.ProjectDir = C:\Users\wook9\Desktop\2024-2\프밍언\LexicalAnalyzer_Assignment1_PLT\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 

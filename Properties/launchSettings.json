@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LLParser": {
+      "commandName": "Project",
+      "workingDirectory": "$(SolutionDir)"
+    }
+  }
+}

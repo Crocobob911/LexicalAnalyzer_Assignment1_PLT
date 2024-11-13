@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,8 +13,8 @@ enum Token {
     OP = 3,
     AssignOp = 11, // :=
     SemiColon = 12, // ;
-    AddOp = 13, // +
-    MultOp = 14, // *
+    AddOp = 13, // + -
+    MultOp = 14, // * /
     LeftParen = 15, // (
     RightParen = 16 // )
 }
@@ -36,11 +37,16 @@ class Program {
 
 class LexicalAnalyzer {
 
+    bool debug = false;
+
     private List<string> inputStringList = new List<string>();
     private List<string> lexemeList = new List<string>();
     private List<Token> tokenList = new List<Token>();
     private Token nextToken = 0;
     private string nextLexeme = "";
+
+    private List<string> statementString = new List<string>();
+    private Dictionary<string, int?> variableStorage = new Dictionary<string, int?>();
 
     private Dictionary<Token, int> tokenCount = new Dictionary<Token, int> {
         { Token.ID, 0 },
@@ -49,16 +55,17 @@ class LexicalAnalyzer {
     }; // -- 요소의 개수를 저장하는 딕셔너리
     
     private string opSymbols = "(+-*/();)";
-    private bool errorFlag = false;
-    private List<String> errorList = new List<string>();
+    //private bool errorFlag = false;
+    //private List<string> errorList = new List<string>();
     
     public void Analyze(string filePath) {
         MakeStringListFromFile(filePath);
         MakeTokenList(inputStringList);
         
         Statements();
-        PrintAllCounts_debug();
-        if (errorFlag)      PrintElementsOfStringList(errorList);
+        //PrintAllCounts_debug();
+        PrintResult();
+        //if (errorFlag)      PrintElementsOfStringList(errorList);
     }
 
     // Text File에서 String들을 읽어와
@@ -201,105 +208,155 @@ class LexicalAnalyzer {
         
         tokenList.RemoveAt(0);
         lexemeList.RemoveAt(0);
+
+        statementString.Add(nextLexeme);
         
-        Console.WriteLine("Next Token = " + nextToken + 
+        if(debug) Console.WriteLine("Next Token = " + nextToken + 
                           " | Next Lexeme = " + nextLexeme);
     }
     
     private void Statements() {
-        Console.WriteLine("<< Statements enter >>");
+        if (debug) Console.WriteLine("<< Statements enter >>");
         Statement();
         do {
-            Lexical();
-            if (nextToken == Token.SemiColon) { 
+            //Lexical();
+            if (nextToken == Token.SemiColon) {
+                //Console.WriteLine("\t\t\t 작동을 하지 않아요!");
+                
                 Statement();
             }
         }while(nextToken is not 0);
-        
-        Console.WriteLine("<< Statements Exit >>");
+
+        if (debug) Console.WriteLine("<< Statements Exit >>");
     }
     
     private void Statement() {
-        Console.WriteLine("<< Statement enter >>");
+        if (debug) Console.WriteLine("<< Statement enter >>");
         Lexical();
         if (nextToken is Token.ID) {
             tokenCount[Token.ID] += 1;
+
+            string targetVariable = nextLexeme;
+            int? value = 0;
+
             Lexical();
-            if (nextToken is Token.AssignOp) {
-                tokenCount[Token.OP] += 1;
+            if (nextToken is Token.AssignOp) {      //assign 은 더하지 않더군요
+                //tokenCount[Token.OP] += 1; 
                 Lexical();
-                Expression();
+                value = Expression();
             }
             else {
                 Console.WriteLine("(ERROR) Assign Symbol (:=) is expected.");
                 // errorFlag = true;
                 // errorList.Add("(ERROR) Assign Symbol (:=) is expected.");
             }
+
+            variableStorage.Add(targetVariable, value);
         }
         else {
             Console.WriteLine("(ERROR) Identifier is expected next.");
             // errorFlag = true;
             // errorList.Add("(ERROR) Identifier is expected next.");
         }
-        Console.WriteLine("<< Statement Exit >>");
+        FlushStatementString();
+        FlushElements();
+        if (debug) Console.WriteLine("<< Statement ----------- Exit >>");
     }
       
-    private void Expression() {
-        Console.WriteLine("<< Expression Enter >>");
-        Term();
-        TermTail();
-        Console.WriteLine("<< Expression Exit >>");
+    private int? Expression() {
+        if (debug) Console.WriteLine("<< Expression Enter >>");
+        int? termValue = Term();
+        int? tailValue = TermTail();
+        if (debug) Console.WriteLine("<< Expression Exit >>");
+
+        return termValue + tailValue;
     }
 
-    private void TermTail() {
-        Console.WriteLine("<< TermTail Enter >>");
+    private int? TermTail() {
+        if (debug) Console.WriteLine("<< TermTail Enter >>");
+
+        int? result;
+
         if (nextToken is Token.AddOp) {
+            var op = nextLexeme;
             tokenCount[Token.OP] += 1;
+
             Lexical();
-            Term();
-            TermTail();
+            
+            
+            int? termValue = Term();
+            int? tailValue = TermTail();
+
+            if (op == "-") termValue *= -1;
+
+            
+            result = termValue + tailValue;
         }
         else {
-            // 입실론 처리
+            
+            result = 0;
         }
-        Console.WriteLine("<< TermTail Exit >>");
+
+        if (debug) Console.WriteLine("<< TermTail Exit >>");
+        return result;
     }
 
-    private void Term() {
-        Console.WriteLine("<< Term Enter >>");
-        Factor();
-        FactorTail();
-        Console.WriteLine("<< Term Exit >>");
+    private int? Term() {
+        if (debug) Console.WriteLine("<< Term Enter >>");
+        int? factValue = Factor();
+        (int?, bool) tailValue = FactorTail();
+        if (debug) Console.WriteLine("<< Term Exit >>");
+
+        //Console.WriteLine("result : " + factValue + " / " + tailValue);
+        if(tailValue.Item2) return factValue * tailValue.Item1;
+        return factValue / tailValue.Item1;
     }
     
-    private void FactorTail() {
-        Console.WriteLine("<< FactorTail Enter >>");
+    private (int?, bool) FactorTail() {
+        if (debug) Console.WriteLine("<< FactorTail Enter >>");
+        int? result = 1; bool isMul = true;
         if (nextToken is Token.MultOp) {
             tokenCount[Token.OP] += 1;
+            if (nextLexeme == "/") isMul = false;
             Lexical();
-            Factor();
-            FactorTail();
+            int? factValue = Factor();
+            (int?, bool) tailValue = FactorTail();
+
+
+
+            if (tailValue.Item2) result = factValue * tailValue.Item1;
+            else result = factValue / tailValue.Item1;
         }
         else {
-            // 입실론 처리 -> 이거 어케 함
+            result = 1;
+            // 입실론 처리 -> 이거 어케 함 ->> 네 해드렸습니다
         }
-        Console.WriteLine("<< FactorTail Exit >>");
+        
+        if (debug) Console.WriteLine("<< FactorTail Exit >>");
+        return (result, isMul);
     }
   
-    private void Factor() {
-        Console.WriteLine("<< Factor Enter >>");
+    private int? Factor() {
+        if (debug) Console.WriteLine("<< Factor Enter >>");
+
+        int? result = 1;
         if (nextToken is Token.ID ) {
             tokenCount[Token.ID] += 1;
+            result = variableStorage[nextLexeme];
             Lexical();
+            
+            ////
         }
         else if (nextToken is Token.Const) {
             tokenCount[Token.Const] += 1;
+            result = int.Parse(nextLexeme);
             Lexical();
+            
         }
         else {
             if (nextToken is Token.LeftParen) {
                 Lexical();
-                Expression();
+                result = Expression();
                 if (nextToken is Token.RightParen) {
                     Lexical();
                 }
@@ -310,12 +367,44 @@ class LexicalAnalyzer {
                 }
             }
         }
-        Console.WriteLine("<< Factor Exit >>");
+        if (debug) Console.WriteLine("<< Factor Exit >>");
+
+        return result;
     }
 
     
+    private void FlushStatementString()
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+        foreach(var str in statementString)
+        {
+            stringBuilder.Append(str);
+            stringBuilder.Append(' ');
+        }
+        //stringBuilder.Append(';');
+        Console.WriteLine(stringBuilder.ToString());
+        statementString.Clear();
+    }
+    private void FlushElements()
+    {
+        Console.WriteLine("ID: " + tokenCount[Token.ID] + "; CONST: " + tokenCount[Token.Const] + " OP: " + tokenCount[Token.OP] + ";");
+        foreach (var key in tokenCount.Keys.ToList())
+        {
+            tokenCount[key] = 0;
+        }
+        if (true) Console.WriteLine("(OK)");
+    }
+
+    private void PrintResult()
+    {
+        foreach(var key in variableStorage.Keys)
+        {
+            Console.WriteLine($"ID : {key} , value : {variableStorage[key]}");
+        }
+    }
+
     //--------- 디버깅용. 나중에 지우기 ------------
-    
+
     private void PrintElementsOfStringList(List<String> list) {
         foreach (var str in list) {
             Console.Write(str + ' ');
@@ -324,7 +413,7 @@ class LexicalAnalyzer {
         Console.Write("\n");
     }
     public void PrintAllCounts_debug() {
-        Console.WriteLine("Id count : " + tokenCount[Token.ID] + "Const Count : " + tokenCount[Token.Const] + "\n" +
+        Console.WriteLine("Id count : " + tokenCount[Token.ID] + "\nConst Count : " + tokenCount[Token.Const] + "\n" +
                           "Op Count : " + tokenCount[Token.OP]);
     }
     public void PrintAllToken_debug() {
