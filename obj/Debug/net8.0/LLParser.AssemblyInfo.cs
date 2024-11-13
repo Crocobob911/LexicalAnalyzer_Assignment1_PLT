@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LLParser")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e7923d8e3bde9726ce937d279c01e4ea459eca39")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2751fc7814e57f3d8cc17f320277585df74f9856")]
 [assembly: System.Reflection.AssemblyProductAttribute("LLParser")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LLParser")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

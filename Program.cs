@@ -36,6 +36,9 @@ class Program {
 }
 
 class LexicalAnalyzer {
+    #region field
+
+
 
     bool debug = false;
 
@@ -55,9 +58,10 @@ class LexicalAnalyzer {
     }; // -- 요소의 개수를 저장하는 딕셔너리
     
     private string opSymbols = "(+-*/();)";
-    //private bool errorFlag = false;
-    //private List<string> errorList = new List<string>();
-    
+    private bool errorFlag = false;
+    private bool cannotFix = false;
+    private List<string> errorList = new List<string>();
+    #endregion
     public void Analyze(string filePath) {
         MakeStringListFromFile(filePath);
         MakeTokenList(inputStringList);
@@ -67,6 +71,10 @@ class LexicalAnalyzer {
         PrintResult();
         //if (errorFlag)      PrintElementsOfStringList(errorList);
     }
+
+    #region Text File -> String -> Lexeme, Token List
+
+
 
     // Text File에서 String들을 읽어와
     // Lexeme List와 Token List를 생성하는 메서드들
@@ -191,6 +199,10 @@ class LexicalAnalyzer {
             LookUpToken(word);
         }
     }
+    #endregion
+
+    #region main analyze system
+
 
 
     private void Lexical() {
@@ -220,12 +232,14 @@ class LexicalAnalyzer {
         Statement();
         do {
             //Lexical();
-            if (nextToken == Token.SemiColon) {
-                //Console.WriteLine("\t\t\t 작동을 하지 않아요!");
-                
+            if (nextToken == Token.SemiColon) {               
                 Statement();
             }
-        }while(nextToken is not 0);
+            else 
+            {
+                
+            }
+        } while(nextToken is not 0);
 
         if (debug) Console.WriteLine("<< Statements Exit >>");
     }
@@ -233,38 +247,59 @@ class LexicalAnalyzer {
     private void Statement() {
         if (debug) Console.WriteLine("<< Statement enter >>");
         Lexical();
-        if (nextToken is Token.ID) {
+        if (nextToken is Token.SemiColon)
+        {
+            AddError("(ERROR) Statement is empty.");
+            Console.WriteLine("error");
+            
+        }
+        else if (nextToken is Token.ID) {
             tokenCount[Token.ID] += 1;
 
             string targetVariable = nextLexeme;
             int? value = 0;
 
+            returnWithAssignOp:
             Lexical();
+
             if (nextToken is Token.AssignOp) {      //assign 은 더하지 않더군요
                 //tokenCount[Token.OP] += 1; 
                 Lexical();
                 value = Expression();
             }
+            
             else {
-                Console.WriteLine("(ERROR) Assign Symbol (:=) is expected.");
-                // errorFlag = true;
-                // errorList.Add("(ERROR) Assign Symbol (:=) is expected.");
+                AddError("(ERROR) Assign Symbol (:=) is expected.");
+                statementString.RemoveAt(statementString.Count - 1);
+                UndoLexical();
+                tokenList.Insert(0, Token.AssignOp);
+                lexemeList.Insert(0, ":=");
+
+                goto returnWithAssignOp;            // 복구후 전단계로 보내기 
+
             }
 
             variableStorage.Add(targetVariable, value);
         }
         else {
-            Console.WriteLine("(ERROR) Identifier is expected next.");
-            // errorFlag = true;
-            // errorList.Add("(ERROR) Identifier is expected next.");
+            AddError("(ERROR) Identifier is expected next.", true);     // cannot fixed
+            
+
         }
         FlushStatementString();
         FlushElements();
+        FlushErrorState();
         if (debug) Console.WriteLine("<< Statement ----------- Exit >>");
     }
       
     private int? Expression() {
         if (debug) Console.WriteLine("<< Expression Enter >>");
+        while(nextToken is Token.AssignOp)
+        {
+            AddError("(ERROR) Extra Assign Symbol (:=) is not allowed.");
+            statementString.RemoveAt(statementString.Count - 1);
+            Lexical();
+        }
         int? termValue = Term();
         int? tailValue = TermTail();
         if (debug) Console.WriteLine("<< Expression Exit >>");
@@ -282,8 +317,13 @@ class LexicalAnalyzer {
             tokenCount[Token.OP] += 1;
 
             Lexical();
-            
-            
+            if(nextToken is Token.AddOp || nextToken is Token.MultOp)
+            {
+                AddError("(ERROR) Extra Op is not allowed.");
+                statementString.RemoveAt(statementString.Count - 1);
+                Lexical();
+            }
+
             int? termValue = Term();
             int? tailValue = TermTail();
 
@@ -307,7 +347,6 @@ class LexicalAnalyzer {
         (int?, bool) tailValue = FactorTail();
         if (debug) Console.WriteLine("<< Term Exit >>");
 
-        //Console.WriteLine("result : " + factValue + " / " + tailValue);
         if(tailValue.Item2) return factValue * tailValue.Item1;
         return factValue / tailValue.Item1;
     }
@@ -319,6 +358,12 @@ class LexicalAnalyzer {
             tokenCount[Token.OP] += 1;
             if (nextLexeme == "/") isMul = false;
             Lexical();
+            if(nextToken is Token.MultOp || nextToken is Token.AddOp)
+            {
+                AddError("(ERROR) Extra Op is not allowed.");
+                statementString.RemoveAt(statementString.Count - 1);
+                Lexical();
+            }
             int? factValue = Factor();
             (int?, bool) tailValue = FactorTail();
 
@@ -329,7 +374,7 @@ class LexicalAnalyzer {
         }
         else {
             result = 1;
-            // 입실론 처리 -> 이거 어케 함 ->> 네 해드렸습니다
+            // 입실론 처리
         }
         
         if (debug) Console.WriteLine("<< FactorTail Exit >>");
@@ -342,7 +387,14 @@ class LexicalAnalyzer {
         int? result = 1;
         if (nextToken is Token.ID ) {
             tokenCount[Token.ID] += 1;
-            result = variableStorage[nextLexeme];
+
+            if (!variableStorage.TryGetValue(nextLexeme, out result))
+            {
+                AddError($"(ERROR) {nextLexeme} is not defined.");
+                result = null;
+            }
+            
+            
             Lexical();
             
             ////
@@ -361,9 +413,8 @@ class LexicalAnalyzer {
                     Lexical();
                 }
                 else {
-                    Console.WriteLine("(ERROR) RightParen expected for next symbol.");
-                    // errorFlag = true;
-                    // errorList.Add("(ERROR) RightParen expected for next symbol.");
+                    AddError("(ERROR) RightParen expected for next symbol. This statement may cause unexpected changes in values.", true);     
+
                 }
             }
         }
@@ -371,8 +422,15 @@ class LexicalAnalyzer {
 
         return result;
     }
+    #endregion
 
-    
+    #region Console output and error handling
+
+    private void UndoLexical()
+    {
+        tokenList.Insert(0, nextToken);
+        lexemeList.Insert(0, nextLexeme);
+    }
     private void FlushStatementString()
     {
         StringBuilder stringBuilder = new StringBuilder();
@@ -392,18 +450,60 @@ class LexicalAnalyzer {
         {
             tokenCount[key] = 0;
         }
-        if (true) Console.WriteLine("(OK)");
+        
     }
 
+    private void AddError(string error, bool cannotFix = false)
+    {
+        if (cannotFix)
+        {
+            this.cannotFix = true;
+            while (nextToken is not Token.SemiColon && nextToken is not 0)
+            {
+                Lexical();
+            }
+
+            //UndoLexical();
+
+        }
+        errorFlag = true;
+        errorList.Add(error);
+    }
+    private void FlushErrorState()
+    {
+        if (!errorFlag) // 에러가 없으면 그냥 넘어감
+        {
+            Console.WriteLine("(OK)");
+            return;
+        }
+
+        foreach (var error in errorList)
+        {
+            Console.WriteLine(error);
+        }
+
+        if (cannotFix) Console.WriteLine("(IGNORED) Since it is impossible to fix, this statement will be ignored.");
+
+        cannotFix = false;
+        errorFlag = false;
+        errorList.Clear();
+    }
     private void PrintResult()
     {
+        Console.Write("Result ==> ");
         foreach(var key in variableStorage.Keys)
         {
-            Console.WriteLine($"ID : {key} , value : {variableStorage[key]}");
+            int? value = variableStorage[key];
+            if (value.HasValue)
+                Console.Write($"{key}: {value}; ");
+            else
+                Console.Write($"{key}: Unknown; ");
         }
+        Console.WriteLine();
     }
+    #endregion
 
-    //--------- 디버깅용. 나중에 지우기 ------------
+    #region for debug
 
     private void PrintElementsOfStringList(List<String> list) {
         foreach (var str in list) {
@@ -434,4 +534,5 @@ class LexicalAnalyzer {
         Console.Write("\n");
         Console.WriteLine("-----------------");
     }
+    #endregion
 }
