@@ -50,6 +50,7 @@ class LexicalAnalyzer {
 
     private List<string> statementString = new List<string>();
     private Dictionary<string, int?> variableStorage = new Dictionary<string, int?>();
+    private Dictionary<string, int?> tempVariableStorage = new Dictionary<string, int?>();
 
     private Dictionary<Token, int> tokenCount = new Dictionary<Token, int> {
         { Token.ID, 0 },
@@ -246,6 +247,9 @@ class LexicalAnalyzer {
     
     private void Statement() {
         if (debug) Console.WriteLine("<< Statement enter >>");
+
+        tempVariableStorage = variableStorage.ToDictionary(entry => entry.Key, entry => entry.Value);   // 뭔가 linq 쓰는 방법이 있다길래 해봄, statement 문제 발생시 원래대로 복구하기 위함
+
         Lexical();
         if (nextToken is Token.SemiColon)
         {
@@ -279,7 +283,7 @@ class LexicalAnalyzer {
 
             }
 
-            variableStorage.Add(targetVariable, value);
+            tempVariableStorage.Add(targetVariable, value);
         }
         else {
             AddError("(ERROR) Identifier is expected next.", true);     // cannot fixed
@@ -288,6 +292,9 @@ class LexicalAnalyzer {
         }
         FlushStatementString();
         FlushElements();
+
+        if(!cannotFix) variableStorage = tempVariableStorage.ToDictionary(entry => entry.Key, entry => entry.Value); // 문제가 없으면 저장
+        //else tempVariableStorage = variableStorage.ToDictionary(entry => entry.Key, entry => entry.Value); // 문제가 있으면 복구 -> 어짜피 statement 시작할 때 복구하니까 필요 없음 
         FlushErrorState();
         if (debug) Console.WriteLine("<< Statement ----------- Exit >>");
     }
@@ -388,7 +395,7 @@ class LexicalAnalyzer {
         if (nextToken is Token.ID ) {
             tokenCount[Token.ID] += 1;
 
-            if (!variableStorage.TryGetValue(nextLexeme, out result))
+            if (!tempVariableStorage.TryGetValue(nextLexeme, out result))
             {
                 AddError($"(ERROR) {nextLexeme} is not defined.");
                 result = null;
